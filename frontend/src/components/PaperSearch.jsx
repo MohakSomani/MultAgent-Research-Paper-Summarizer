@@ -1,3 +1,4 @@
+// PaperSearch.jsx
 import React, { useState } from 'react';
 import { 
   Box, 
@@ -16,8 +17,12 @@ export default function PaperSearch({ onResults }) {
   const handleSearch = async () => {
     setLoading(true);
     try {
-      const { data } = await searchPapers(query);
-      onResults(data);
+      const result = await searchPapers(query); // Plain string result
+      console.log("Search Results:", result); // Log the result
+      onResults(result); // Pass the result to the parent component
+    } catch (error) {
+      console.error("Error fetching search results:", error);
+      onResults(""); // Handle errors gracefully
     } finally {
       setLoading(false);
     }
@@ -42,7 +47,7 @@ export default function PaperSearch({ onResults }) {
           disabled={!query || loading}
           startIcon={loading && <CircularProgress size={20} />}
         >
-          Search
+          {loading ? "Searching..." : "Search"}
         </Button>
       </Box>
     </Paper>

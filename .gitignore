@@ -1,0 +1,52 @@
+# Frontend
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.cache/
+/frontend/coverage/
+/frontend/build/
+/frontend/*.log
+/frontend/npm-debug.log*
+/frontend/yarn-debug.log*
+/frontend/yarn-error.log*
+
+# Backend
+/backend/__pycache__/
+/backend/*.py[cod]
+/backend/*$py.class
+/backend/.env
+/backend/.venv/
+/backend/env/
+/backend/*.log
+/backend/models/
+/backend/uploads/
+
+# Project data files
+/data/
+/papers/
+/summaries/
+*.pdf
+*.xml
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Docker
+docker-volumes/
+.docker/
+
+# IDE specific files
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Logs
+logs/
+*.log

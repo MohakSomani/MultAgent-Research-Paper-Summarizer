@@ -1,26 +1,42 @@
 #!/bin/bash
-# filepath: /home/mohak/Desktop/MultAgent-Research-Paper-Summarizer/run.sh
 
-# Stop running containers
+set -e
+
+# Function to check if nvidia-smi is available
+check_gpu() {
+  if command -v nvidia-smi &> /dev/null; then
+    echo "✅ NVIDIA GPU detected"
+    return 0
+  else
+    echo "⚠️ No NVIDIA GPU detected, will run on CPU only"
+    export GPU_LAYERS=0
+    return 1
+  fi
+}
+
+# Create models directory for volume mounting
+mkdir -p models
+
+# Check for GPU
+check_gpu
+
+# Stop and remove existing containers
+echo "🧹 Cleaning up existing containers..."
 docker compose down
 
-# Remove all stopped containers, dangling images, and unused networks
-echo "======================Cleaning up inactive containers and freeing space...======================"
-docker container prune -f
-docker image prune -f
-docker network prune -f
+# Remove existing images
+echo "🧹 Removing existing images..."
+docker rmi $(docker images -q 'multagent-research-paper-summarizer_*') --force 2>/dev/null || true
 
-# Alternative: Use system prune for a more thorough cleanup (uncomment if needed)
-# docker system prune -f
+# Build and start containers
+echo "🚀 Starting the application..."
+echo "📝 The model will be downloaded inside the container if needed..."
+docker compose up --build -d
 
-# Build containers
-echo "======================Building containers...======================"
-docker compose build
+echo "✅ Application is running!"
+echo "📊 Backend API: http://localhost:8000"
+echo "🖥️ Frontend: http://localhost:5173"
 
-# Start services
-echo "======================Starting services...======================"
-docker compose up -d
-
-# Follow logs
-echo "======================Displaying logs...======================"
+# Show logs
+echo "📝 Showing logs (Ctrl+C to exit):"
 docker compose logs -f

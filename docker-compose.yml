@@ -1,17 +1,41 @@
-# version: "3.8"
+version: '3'
 
 services:
-  frontend:
-    build: ./frontend
+  backend:
+    build:
+      context: ./backend
     ports:
-      - "5173:5173"  # Match Vite default
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./models:/app/models
+      - ./uploads:/app/uploads
     environment:
-      - NODE_ENV=development
-      - VITE_API_URL=http://localhost:8000  # Change to localhost instead of research-agent
+      - MODEL_PATH=${MODEL_PATH:-./models/llama-2-7b.Q4_K_M.gguf}
+      - HUGGINGFACE_MODEL_ID=${HUGGINGFACE_MODEL_ID:-TheBloke/Llama-2-7B-GGUF}
+      - HUGGINGFACE_FILENAME=${HUGGINGFACE_FILENAME:-llama-2-7b.Q4_K_M.gguf}
+      - GPU_LAYERS=${GPU_LAYERS:-40}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "5173:5173"
     volumes:
       - ./frontend:/app
       - /app/node_modules
-      
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+
   grobid:
     image: lfoppiano/grobid:0.7.2
     ports:
@@ -22,16 +46,3 @@ services:
       timeout: 30s
       retries: 10
       start_period: 180s
-
-  research-agent:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./backend:/app
-    env_file:
-      - ./backend/.env
-    depends_on:
-      - grobid
