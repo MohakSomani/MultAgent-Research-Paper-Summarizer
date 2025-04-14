@@ -1,8 +1,22 @@
 import os
 from dotenv import load_dotenv
-from crewai.tools import tool
+# Handle different crewai versions
+try:
+    from crewai.tools import tool
+except ImportError:
+    try:
+        from crewai.tools.tool import tool
+    except ImportError:
+        # Fallback implementation if needed
+        def tool(name):
+            def decorator(func):
+                func.__tool_name__ = name
+                return func
+            return decorator
+
 from TTS.api import TTS
 from langchain_community.llms import LlamaCpp
+from pathlib import Path
 
 load_dotenv()
 os.environ["CREWAI_DISABLE_AWS"] = "true"
@@ -44,6 +58,19 @@ def summarize_text(text: str) -> str:
 @tool("Audio Generator")
 def generate_audio(text: str, output_path: str = "output.mp3") -> str:
     """Convert text to speech"""
-    tts = TTS(model_name="tts_models/en/ljspeech/vits", gpu=True)
-    tts.tts_to_file(text=text[:5000], file_path=output_path)
-    return output_path
+    try:
+        # Create parent directory if it doesn't exist
+        output_file = Path(output_path)
+        output_file.parent.mkdir(exist_ok=True, parents=True)
+        
+        print(f"Generating audio file at {output_path}")
+        # Force CPU mode to avoid GPU issues
+        tts = TTS(model_name="tts_models/en/ljspeech/vits", gpu=False)
+        # Limit text length to avoid errors
+        cleaned_text = text.replace('\n', ' ').strip()[:2000]
+        tts.tts_to_file(text=cleaned_text, file_path=output_path)
+        print(f"Audio generation complete: {output_path}")
+        return output_path
+    except Exception as e:
+        print(f"Error in generate_audio: {str(e)}")
+        raise e

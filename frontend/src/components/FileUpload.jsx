@@ -41,6 +41,7 @@ export default function FileUpload({ onUploadComplete }) {
     
     try {
       let response;
+      let url = import.meta.env.VITE_API_URL || 'http://localhost:8000';
       
       if (tabValue === 0) { // File upload
         if (!file) {
@@ -50,7 +51,8 @@ export default function FileUpload({ onUploadComplete }) {
         const formData = new FormData();
         formData.append('file', file);
         
-        response = await fetch('http://localhost:8000/upload-pdf', {
+        console.log('Uploading PDF file to:', `${url}/upload-pdf`);
+        response = await fetch(`${url}/upload-pdf`, {
           method: 'POST',
           body: formData,
         });
@@ -59,7 +61,8 @@ export default function FileUpload({ onUploadComplete }) {
           throw new Error("Please enter a paper URL or ID");
         }
         
-        response = await fetch(`http://localhost:8000/summarize-direct`, {
+        console.log('Submitting paper URL/ID:', paperUrl, 'to:', `${url}/summarize-direct`);
+        response = await fetch(`${url}/summarize-direct`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -69,13 +72,16 @@ export default function FileUpload({ onUploadComplete }) {
       }
       
       if (!response.ok) {
-        throw new Error(`Failed to process: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error(`API error (${response.status}):`, errorText);
+        throw new Error(`Server error: ${response.status} ${response.statusText}`);
       }
       
       const result = await response.text();
+      console.log('Summary received, length:', result.length);
       onUploadComplete(result);
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Error during submission:", error);
       setError(error.message);
     } finally {
       setLoading(false);

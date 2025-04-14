@@ -1,48 +1,43 @@
-version: '3'
-
 services:
   backend:
+    container_name: summarizer_backend
     build:
       context: ./backend
     ports:
-      - "8000:8000"
+      - "8000:8000"  # Use consistent port 8000 for simplicity
     volumes:
       - ./backend:/app
       - ./models:/app/models
-      - ./uploads:/app/uploads
+      # Updated uploads path to be inside the backend directory
+      - ./backend/uploads:/app/uploads
+      - pip_cache:/root/.cache/pip
     environment:
       - MODEL_PATH=${MODEL_PATH:-./models/llama-2-7b.Q4_K_M.gguf}
       - HUGGINGFACE_MODEL_ID=${HUGGINGFACE_MODEL_ID:-TheBloke/Llama-2-7B-GGUF}
       - HUGGINGFACE_FILENAME=${HUGGINGFACE_FILENAME:-llama-2-7b.Q4_K_M.gguf}
-      - GPU_LAYERS=${GPU_LAYERS:-40}
+      - GPU_LAYERS=40
+      - NVIDIA_VISIBLE_DEVICES=all
     deploy:
       resources:
         reservations:
           devices:
             - driver: nvidia
-              count: 1
+              count: all
               capabilities: [gpu]
 
   frontend:
+    container_name: summarizer_frontend
     build:
       context: ./frontend
     ports:
-      - "5173:5173"
+      - "5173:5173"  # Use consistent port 5173
     volumes:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      - VITE_API_URL=http://localhost:8000
+      - VITE_API_URL=http://localhost:8000  # Match the backend port
     depends_on:
       - backend
 
-  grobid:
-    image: lfoppiano/grobid:0.7.2
-    ports:
-      - "8070:8070"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8070/api/isalive || echo 'Service starting'"]
-      interval: 60s
-      timeout: 30s
-      retries: 10
-      start_period: 180s
+volumes:
+  pip_cache:

@@ -1,5 +1,6 @@
 import axios from 'axios';
 
+// Fix the API base URL to consistently use port 8000
 const API = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
   headers: {
@@ -7,19 +8,25 @@ const API = axios.create({
   },
 });
 
-// Add request and response logging
+// Add request and response logging - but only essential information
 API.interceptors.request.use((request) => {
-  console.log('Request:', request);
+  console.log(`API Request: ${request.method} ${request.url}`);
+  if (request.data) {
+    console.log('Request Data:', request.data);
+  }
   return request;
 });
 
 API.interceptors.response.use(
   (response) => {
-    console.log('Response:', response);
-    return response.data; // Return plain string directly
+    console.log(`API Response from ${response.config.url}:`, 
+      typeof response.data === 'string' 
+        ? `${response.data.substring(0, 100)}${response.data.length > 100 ? '...' : ''}` 
+        : response.data);
+    return response.data;
   },
   (error) => {
-    console.error('Error Response:', error.response || error.message);
+    console.error('API Error:', error.response?.status || error.message);
     return Promise.reject(error);
   }
 );

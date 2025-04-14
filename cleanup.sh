@@ -14,9 +14,8 @@ check_gpu() {
   fi
 }
 
-# Create necessary directories for volume mounting
+# Create models directory for volume mounting
 mkdir -p models
-mkdir -p backend/uploads/audio
 
 # Check for GPU
 check_gpu
@@ -28,6 +27,10 @@ check_gpu
 # docker system prune -af --volumes
 # echo "🧹 Removing application-specific images..."
 # docker rmi $(docker images -q 'multagent-research-paper-summarizer_*') --force 2>/dev/null || true
+
+# Remove duplicate or obsolete files
+echo "Removing duplicate or obsolete files..."
+rm -f frontend/src/FileUpload.jsx  # Obsolete file, now using components/FileUpload.jsx
 
 # Build and start containers
 echo "🚀 Starting (or rebuilding) the application..."

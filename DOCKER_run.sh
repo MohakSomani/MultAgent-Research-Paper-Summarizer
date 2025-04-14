@@ -14,9 +14,8 @@ check_gpu() {
   fi
 }
 
-# Create necessary directories for volume mounting
+# Create models directory for volume mounting
 mkdir -p models
-mkdir -p backend/uploads/audio
 
 # Check for GPU
 check_gpu
