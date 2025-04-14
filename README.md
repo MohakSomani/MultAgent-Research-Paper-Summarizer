@@ -45,7 +45,15 @@ Each agent has:
 
 ## Setup Instructions
 
-### Option 1: Docker (Recommended)
+### Prerequisites
+
+- Git
+- Docker and Docker Compose (for Docker setup)
+- Python 3.10+ (for local setup)
+- Node.js 18+ (for local frontend)
+- NVIDIA GPU (optional, for faster inference)
+
+### Option 1: Docker (NOT WORKING PROPERLY)
 
 The easiest way to run the application is using Docker:
 
@@ -55,7 +63,7 @@ The easiest way to run the application is using Docker:
    cd MultAgent-Research-Paper-Summarizer
    ```
 
-2. Run the application with the provided script:
+2. Make the run script executable and execute it:
    ```bash
    chmod +x run.sh
    ./run.sh
@@ -97,7 +105,7 @@ For development or systems without Docker:
 4. In a separate terminal, run the frontend:
    ```bash
    cd frontend
-   npm install
+   npm install  # Only needed first time
    npm run dev
    ```
 
@@ -107,159 +115,134 @@ For development or systems without Docker:
 
 ## Usage
 
-### Paper Search
+### Paper Search Pipeline
 
 1. Enter your research topic in the search field
 2. Click "Search" to find recent papers on the topic
 3. View the list of papers with titles and links
+4. Pipeline: `User Query → API → Research Agent → arXiv → Results`
 
-### Generate Summaries
+### Paper Summarization Pipeline
 
 1. Select a paper from the search results using the dropdown
 2. Click "Summarize" to generate a concise summary
 3. Review the summary in the interface
+4. Pipeline: `Paper Selection → API → Writer Agent → Summary Generation → Display`
 
-### Create Audio Explanations
+### Audio Generation Pipeline
 
 1. After generating a summary, click "Generate Podcast"
-2. Wait for the audio to be processed
+2. Wait for the audio to be processed (always creates fresh audio)
 3. Use the audio player to listen to the summary
+4. Pipeline: `Summary Text → API → TTS Engine → Audio File → Audio Playback`
 
-### Upload PDF or Use Direct URL
+### PDF Upload Pipeline
 
 1. Navigate to the "Upload PDF or Enter Paper" section
-2. Either upload a PDF file or enter an arXiv URL/ID
+2. Upload your PDF file
+3. System will process and extract text from the PDF
+4. Writer agent generates a concise summary
+5. Pipeline: `PDF Upload → File Storage → Text Extraction → Writer Agent → Summary`
+
+### Direct arXiv URL/ID Pipeline
+
+1. Navigate to the "Upload PDF or Enter Paper" section
+2. Enter an arXiv URL or paper ID
 3. Click "Summarize" to process the paper
-4. Generate audio as needed using the "Generate Podcast" button
+4. The system will fetch the paper from arXiv and summarize it
+5. Pipeline: `arXiv ID → API → arXiv Fetch → Writer Agent → Summary`
 
 ## Implementation Details
 
-### Multi-Agent System Implementation
-
-The multi-agent architecture is implemented through:
-
-1. **Custom Agent Definitions** (`custom_crew.py`):
-   ```python
-   class CustomAgent:
-       # Role-specific agent configuration
-       # Each agent has particular expertise and capabilities
-   ```
-
-2. **Task Delegation** (`api.py`):
-   ```python
-   search_task = CustomTask(
-       description="Find 5 recent papers about {query} on arXiv",
-       expected_output="List of papers with titles, PDF URLs",
-       agent=researcher,
-       tools=["process_pdf"]
-   )
-   ```
-
-3. **Specialized Tools** (`tools.py`):
-   ```python
-   @tool("PDF Processor")
-   def process_pdf(pdf_path=None, arxiv_id=None):
-       # Tool for processing PDFs
-   ```
-
-### How Multi-Agent Works with One LLM
-
-While using a single LLM (Llama-2), the system creates a multi-agent architecture through:
-
-1. **Agent Specialization**: Each agent has unique prompts, tasks, and tools
-2. **Context Isolation**: Agents operate with isolated context, focusing on specific tasks
-3. **Tool Integration**: Different capabilities through specialized tools for each role
-4. **Sequential Processing**: Multi-stage workflow where each agent handles part of the pipeline
-
-This approach allows the single LLM to effectively operate as multiple specialized agents, each focusing on a particular aspect of the overall task.
-
-## Backend Architecture
-
-### Core Components
+### Backend Pipeline
 
 The backend system consists of these key components working together:
 
 1. **FastAPI Server (api.py)**  
-   - Exposes HTTP endpoints for search, summarization, and PDF upload
-   - Handles request validation and response formatting
-   - Implements a caching system for improved performance
-   - Routes requests to appropriate agent workflows
+   - Handles HTTP endpoints and request routing
+   - Manages caching for performance optimization
+   - Coordinates agent workflows
+   - File structure:
+     ```
+     backend/
+     ├── api.py           # Main API endpoints
+     ├── custom_crew.py   # Agent orchestration
+     ├── tools.py         # Agent tools implementation
+     ├── audio_generator.py # TTS functionality
+     └── requirements.txt # Dependencies
+     ```
 
-2. **Custom Agent Framework (custom_crew.py)**  
-   - Defines the `CustomAgent` class that encapsulates agent behavior
-   - Implements `CustomTask` for specific task execution
-   - Creates `CustomCrew` for orchestrating multi-agent workflows
-   - Manages prompting logic and context passage between agents
+2. **Agent System (custom_crew.py)**  
+   - Implements agent specialization via roles
+   - Manages tool access and context isolation
+   - Enables multi-step agent workflows
+   - Example workflow:
+     ```
+     Research Query → Research Agent → arXiv Processing → 
+     Writer Agent → Summary Generation → Audio Agent → Speech Synthesis
+     ```
 
-3. **Specialized Tools (tools.py)**  
-   - `process_pdf`: Extracts information from PDF papers or arxiv links
-   - `summarize_text`: Uses LLM to generate concise summaries
-   - `generate_audio`: Converts text to speech using TTS
+3. **Tool Integration (tools.py)**  
+   - `process_pdf`: Searches arxiv and processes papers
+   - `summarize_text`: Generates concise paper summaries
+   - `generate_audio`: Converts text to spoken audio
 
-4. **LLM Integration**  
-   - Uses `LlamaCpp` for local inference without API dependencies
-   - Configures model parameters via environment variables
-   - Implements proper context management for optimal results
+4. **Audio Generation (audio_generator.py)**
+   - Connects to TTS library
+   - Handles text preprocessing for audio
+   - Generates MP3 files
+   - Flow: `Summary Text → TTS Engine → Audio File`
 
-### Workflow Explanation
+### Frontend Architecture
 
-Here's how the system processes typical requests:
+The React frontend provides an intuitive interface:
 
-1. **Paper Search Flow**:
-   ```
-   User Query → FastAPI → Research Analyst Agent → 
-   process_pdf tool → arXiv API → Results Cache → 
-   Formatted Response
-   ```
+1. **Main Components**
+   - `App.jsx`: Main application container
+   - `PaperSearch.jsx`: Search interface
+   - `FileUpload.jsx`: PDF and URL submission
+   - `AudioPlayer.jsx`: Audio playback
 
-2. **Summarization Flow**:
-   ```
-   Paper ID → FastAPI → Technical Writer Agent → 
-   summarize_text tool → Paper Content → LLM → 
-   Formatted Summary → Response
-   ```
+2. **API Integration**
+   - RESTful communication with backend
+   - Proper error handling and loading states
+   - File structure:
+     ```
+     frontend/
+     ├── src/
+     │   ├── App.jsx            # Main application
+     │   ├── api.js             # API client functions
+     │   ├── components/        # UI components  
+     │   │   ├── PaperSearch.jsx
+     │   │   ├── FileUpload.jsx
+     │   │   └── AudioPlayer.jsx
+     │   └── main.jsx           # Entry point
+     ├── package.json           # Dependencies
+     └── vite.config.js         # Build configuration
+     ```
 
-3. **PDF Upload Flow**:
-   ```
-   PDF File → FastAPI → File Storage → 
-   Technical Writer Agent → summarize_text tool → 
-   LLM → Formatted Summary → Response
-   ```
+### Environmental Considerations
 
-4. **Audio Generation Flow**:
-   ```
-   Summary Text → FastAPI → TTS Library → 
-   Audio File → Audio Response
-   ```
+1. **GPU Acceleration**
+   - The system automatically detects NVIDIA GPUs
+   - Configures Llama.cpp to use GPU layers when available
+   - Falls back to CPU-only mode when no GPU is present
 
-### Agent Intelligence
+2. **Docker vs Local**
+   - Docker provides isolation and dependency management
+   - Local setup allows for easier development and debugging
+   - Both approaches use the same core code and workflows
 
-The intelligence of the system comes from:
-
-1. **Specialized Prompting**: Each agent receives role-specific instructions
-2. **Tool Integration**: Agents have access to specific external capabilities
-3. **Context Management**: Information flows between tasks via structured context
-4. **Task Formalization**: Clear task definitions with expected outputs
-
-### Caching Strategy
-
-The backend implements an efficient in-memory caching system:
-
-1. **Query Results**: Previous search results are cached by query string
-2. **Paper Summaries**: Generated summaries are cached by paper index/ID
-3. **Direct Paper Cache**: Papers submitted via URL/ID are cached by identifier
-
-This dramatically improves performance for repeated requests and enables more responsive user experiences.
+3. **File Storage**
+   - Uploads stored in `backend/uploads/`
+   - Audio files in `backend/uploads/audio/`
+   - Models in `backend/models/`
 
 ## Technical Stack
 
 - **Backend**: FastAPI, Langchain, CrewAI
 - **LLM**: Llama-2 (7B quantized)
-- **Frontend**: React, Material UI
+- **Frontend**: React, Material UI, Vite
 - **TTS**: TTS Library for audio generation
 - **Research Tools**: arXiv API integration
 - **Containerization**: Docker and Docker Compose
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
